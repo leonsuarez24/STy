@@ -28,7 +28,7 @@ class OpticsSPC(nn.Module):
         return x
 
     def forward_pass(self, x):
-        ca = self.get_coded_aperture()
+        ca = self.get_coded_aperture().to(x.device)
         y = x * ca
         y = torch.sum(y, dim=(-2, -1))
         y = y.unsqueeze(-1).unsqueeze(-1)
@@ -36,7 +36,7 @@ class OpticsSPC(nn.Module):
         return y
 
     def transpose_pass(self, y):
-        ca = self.get_coded_aperture()
+        ca = self.get_coded_aperture().to(y.device)
         x = y * ca
         x = torch.sum(x, dim=1)
         x = x.unsqueeze(1)
