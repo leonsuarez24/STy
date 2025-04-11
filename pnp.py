@@ -22,7 +22,7 @@ class PlugAndPlayFISTA:
         self.device = device
         self.network = network
 
-    def solve(self, y, x_init):
+    def solve(self, y, x_init, gt, PSNR, SSIM, tau):
         """
         y: observed measurements (B, C, H, W)
         x_init: initial guess (same shape as y)
@@ -33,13 +33,19 @@ class PlugAndPlayFISTA:
             Ax = self.A(x)
             grad = self.At(Ax - y)
             grad2 = self.St(self.S(x)) - self.network(self.At(Ax))
-            grads = grad + grad2
+            grads = grad + grad2 * tau
             x = x - self.step_size * grads
             x = self.denoiser(x)
-            x = torch.clamp(x, 0, 1)
+            
             
 
             loss = F.mse_loss(self.A(x), y)
-            print(f"Iter {k+1:03d}: Loss = {loss.item():.15f}")
+            psnr = PSNR(x, gt)
+            ssim = SSIM(x, gt)
+            
+            print(f"Iter {k+1:03d}: Loss = {loss.item():.15f}" 
+                  f" PSNR = {psnr.item():.3f}"
+                  f" SSIM = {ssim.item():.3f}"
+                  f" MSE = {F.mse_loss(x, gt).item():.3f}")
 
         return x

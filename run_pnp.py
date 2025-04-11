@@ -8,7 +8,7 @@ from models import UNet
 import torch
 from utils import get_dataset
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = 'cpu'# "cuda" if torch.cuda.is_available() else "cpu"
 
 denoiser = DnCNN(
     in_channels=1,
@@ -70,7 +70,4 @@ SSIM = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 PSNR = PeakSignalNoiseRatio(data_range=1.0).to(device)
 
 
-x = pnp.solve(y, x_init)
-
-print(f"SSIM: {SSIM(x, ground_truth)}")
-print(f"PSNR: {PSNR(x, ground_truth)}")
+x = pnp.solve(y, x_init, ground_truth, PSNR, SSIM, 0)
