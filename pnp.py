@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 
 class PlugAndPlayFISTA:
-    def __init__(self, denoiser, A, At, lambd, max_iter, device, network):
+    def __init__(self, denoiser, A, At, lambd, max_iter, device, network, S, St):
         """
         denoiser: a PyTorch model or callable that denoises an image.
         A: forward operator (measurement model), e.g., blur or subsampling.
@@ -15,12 +15,14 @@ class PlugAndPlayFISTA:
         self.denoiser = denoiser
         self.A = A
         self.At = At
+        self.S = S
+        self.St = St
         self.step_size = lambd
         self.max_iter = max_iter
         self.device = device
         self.network = network
 
-    def solve(self, y, x_init, ST_S_x_star):
+    def solve(self, y, x_init):
         """
         y: observed measurements (B, C, H, W)
         x_init: initial guess (same shape as y)
@@ -30,8 +32,11 @@ class PlugAndPlayFISTA:
         for k in range(self.max_iter):
             Ax = self.A(x)
             grad = self.At(Ax - y)
-            grad2 = 0#self.network(x) - ST_S_x_star
-            x = x - self.step_size * (grad + grad2)#self.denoiser(x - self.step_size * (grad + grad2))
+            grad2 = self.St(self.S(x)) - self.network(self.At(Ax))
+            grads = grad + grad2
+            x = x - self.step_size * grads
+            x = self.denoiser(x)
+            x = torch.clamp(x, 0, 1)
             
 
             loss = F.mse_loss(self.A(x), y)

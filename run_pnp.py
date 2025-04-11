@@ -17,14 +17,14 @@ denoiser = DnCNN(
     device=device,
 )
 
-max_iter = 100
-lambd = 0.001
+max_iter = 500
+lambd = 0.0005
 
-path = "WEIGHTS/S1_lr_0.0005_b_32_e_100_s1_409_s2_409_FMNIST_sd_0_bc_32/model/model.pth"
+path = "WEIGHTS/S1_lr_0.0005_b_32_e_100_s1_409_s2_409_FMNIST_sd_0_bc_64/model/model.pth"
 
 model = UNet(
     n_channels=1,
-    base_channel=32,
+    base_channel=64,
 ).to(device)
 
 model.load_state_dict(torch.load(path))
@@ -35,11 +35,19 @@ spc = OpticsSPC(
     matrix=hadamard(32 * 32)[: int(0.4 * 32 * 32)],
 ).to(device)
 
+spc_2 = OpticsSPC(
+    input_size=(1, 32, 32),
+    snapshots=int(0.4 * 32 * 32),
+    matrix=hadamard(32 * 32)[int(0.4 * 32 * 32):int(0.4 * 32 * 32) + int(0.4 * 32 * 32)],
+).to(device)
+
 
 pnp = PlugAndPlayFISTA(
     denoiser=denoiser,
     A=spc.forward_pass,
     At = spc.transpose_pass,
+    S=spc_2.forward_pass,
+    St=spc_2.transpose_pass,
     lambd=lambd,
     max_iter=max_iter,
     device=device,   
@@ -56,13 +64,13 @@ ground_truth = ground_truth.to(device)[0].unsqueeze(0)
 y = spc.forward_pass(ground_truth)
 x_init = spc.transpose_pass(y)
 
-ST_S_x_star = model(ground_truth) # toca cambiarlo
+ST_S_x_star = model(x_init) # toca cambiarlo
 
 SSIM = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 PSNR = PeakSignalNoiseRatio(data_range=1.0).to(device)
 
 
-x = pnp.solve(y, x_init, ST_S_x_star)
+x = pnp.solve(y, x_init)
 
 print(f"SSIM: {SSIM(x, ground_truth)}")
 print(f"PSNR: {PSNR(x, ground_truth)}")
