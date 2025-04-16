@@ -19,6 +19,7 @@ denoiser = DnCNN(
 
 max_iter = 500
 lambd = 0.0005
+gamma = 1
 
 path = "WEIGHTS/S1_lr_0.0005_b_32_e_100_s1_409_s2_409_FMNIST_sd_0_bc_64/model/model.pth"
 
@@ -46,12 +47,11 @@ pnp = PlugAndPlayFISTA(
     denoiser=denoiser,
     A=spc.forward_pass,
     At = spc.transpose_pass,
-    S=spc_2.forward_pass,
-    St=spc_2.transpose_pass,
     lambd=lambd,
     max_iter=max_iter,
     device=device,   
     network=model,
+    gamma=gamma,
     
 )
 

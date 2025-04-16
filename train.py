@@ -18,13 +18,14 @@ import numpy as np
 
 import logging
 from models import UNet
+from deepinv.models import DRUNet
 from optics import OpticsSPC, hadamard
 
 
 def main(args):
     set_seed(args.seed)
 
-    path_name = f"S1_lr_{args.lr}_b_{args.batch_size}_e_{args.epochs}_s1_{str(args.snapshots_1)}_s2_{args.snapshots_2}_{args.dataset}_sd_{args.seed}_bc_{args.base_channels}"
+    path_name = f"S1_lr_{args.lr}_b_{args.batch_size}_e_{args.epochs}_s1_{str(args.snapshots_1)}_s2_{args.snapshots_2}_{args.dataset}_sd_{args.seed}_bc_{args.base_channels}_{args.model}"
 
     args.save_path = args.save_path + path_name
 
@@ -76,6 +77,11 @@ def main(args):
     model = UNet(
         n_channels=1,
         base_channel=args.base_channels,
+    ).to(device) if args.model == "UNet" else DRUNet(
+        in_channels=1,
+        out_channels=1,
+        pretrained="download",
+        device=device,
     ).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -100,7 +106,7 @@ def main(args):
             meas_1 = spc1(img)
             meas_2 = spc2(img)
 
-            pred = model(meas_1)
+            pred = model(meas_1) if args.model == "UNet" else model(meas_1, 0)
 
             loss_train = criterion(pred, meas_2)
 
@@ -135,7 +141,7 @@ def main(args):
                 meas_1 = spc1(img)
                 meas_2 = spc2(img)
 
-                pred = model(meas_1)
+                pred = model(meas_1) if args.model == "UNet" else model(meas_1, 0)
 
                 loss_val = criterion(pred, meas_2)
 
@@ -200,6 +206,11 @@ def main(args):
     model = UNet(
         n_channels=1,
         base_channel=args.base_channels,
+    ).to(device) if args.model == "UNet" else DRUNet(
+        in_channels=1,
+        out_channels=1,
+        pretrained="download",
+        device=device,
     ).to(device)
 
     model.load_state_dict(torch.load(f"{model_path}/model.pth"))
@@ -214,7 +225,7 @@ def main(args):
             meas_1 = spc1(img)
             meas_2 = spc2(img)
 
-            pred = model(meas_1)
+            pred = model(meas_1) if args.model == "UNet" else model(meas_1, 0)
 
             loss_test = criterion(pred, meas_2)
 
@@ -261,6 +272,7 @@ if __name__ == "__main__":
     parser.add_argument("--project_name", type=str, default="S_t_y")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--base_channels", type=int, default=64)
+    parser.add_argument("--model", type=str, default="DRUNet")
     args = parser.parse_args()
 
     args_dict = vars(args)
